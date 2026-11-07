@@ -48,6 +48,8 @@ Then, run the tests:
 $> ninja check-libc
 ```
 
+To build and run the overlay unit tests against LLVM's in-tree GoogleTest instead of `LibcTest`, pass `-DLLVM_LIBC_TEST_USE_GTEST=ON` when configuring CMake.
+
 The build step will build the static archive the in the directory
 `build/projects/libc/lib`. Notice that the above CMake configure step also
 specified an install prefix. This is optional, but it's used, then the following

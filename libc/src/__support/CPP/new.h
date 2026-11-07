@@ -17,6 +17,11 @@
 
 #include <stddef.h> // For size_t
 
+#if defined(LIBC_COPT_TEST_USE_GTEST) || defined(LIBC_COPT_TEST_USE_ZXTEST) || \
+    defined(LIBC_COPT_TEST_USE_PIGWEED)
+#define LIBC_CPP_NEW_USES_STD_NEW 1
+#include <new>
+#else
 // Defining members in the std namespace is not preferred. But, we do it here
 // so that we can use it to define the operator new which takes std::align_val_t
 // argument.
@@ -25,6 +30,7 @@ namespace std {
 enum class align_val_t : size_t {};
 
 } // namespace std
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
@@ -40,9 +46,11 @@ template <class T> [[nodiscard]] constexpr T *launder(T *p) {
 } // namespace cpp
 } // namespace LIBC_NAMESPACE_DECL
 
-LIBC_INLINE void *operator new(size_t, void *p) { return p; }
+#ifndef LIBC_CPP_NEW_USES_STD_NEW
 
-LIBC_INLINE void *operator new[](size_t, void *p) { return p; }
+LIBC_INLINE void *operator new(size_t, void *p) noexcept { return p; }
+
+LIBC_INLINE void *operator new[](size_t, void *p) noexcept { return p; }
 
 // The ideal situation would be to define the various flavors of operator delete
 // inline like we do with operator new above. However, since we need operator
@@ -76,5 +84,7 @@ void operator delete[](void *, size_t, std::align_val_t) noexcept
     DELETE_NAME(delete_array_sized_aligned);
 
 #undef DELETE_NAME
+
+#endif // !LIBC_CPP_NEW_USES_STD_NEW
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H

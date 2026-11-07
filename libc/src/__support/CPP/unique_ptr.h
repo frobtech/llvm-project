@@ -33,7 +33,7 @@ template <typename T> struct default_delete {
   template <typename U, typename = enable_if_t<is_convertible_v<U *, T *>>>
   LIBC_INLINE constexpr default_delete(const default_delete<U> &) {}
 
-  LIBC_INLINE constexpr void operator()(T *ptr) const {
+  LIBC_ALWAYS_INLINE constexpr void operator()(T *ptr) const {
     static_assert(sizeof(T) > 0, "cannot delete an incomplete type");
     delete ptr;
   }
@@ -49,7 +49,7 @@ template <typename T> struct default_delete<T[]> {
 
   template <typename U,
             typename = enable_if_t<is_convertible_v<U (*)[], T (*)[]>>>
-  LIBC_INLINE constexpr void operator()(U *ptr) const {
+  LIBC_ALWAYS_INLINE constexpr void operator()(U *ptr) const {
     static_assert(sizeof(U) > 0, "cannot delete an incomplete type");
     delete[] ptr;
   }

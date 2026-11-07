@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LibcTest.h"
-
 #include "src/__support/CPP/string.h"
 #include "src/__support/c_string.h"
 #include "src/__support/macros/config.h"
+#include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {

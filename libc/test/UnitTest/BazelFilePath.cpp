@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LibcTest.h"
-
 #include "src/__support/CPP/string.h"
 #include "src/__support/c_string.h"
 #include "src/__support/macros/config.h"
+#include "test/UnitTest/Test.h"
 
 #ifdef LIBC_FULL_BUILD
 #include "src/stdlib/getenv.h"

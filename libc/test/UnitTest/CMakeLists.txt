@@ -61,6 +61,9 @@ function(_create_unittest_framework_library fq_target_name)
   endif()
   target_compile_options(${fq_target_name} PRIVATE ${compile_options})
 
+  if(LLVM_LIBC_TEST_USE_GTEST)
+    target_link_libraries(${fq_target_name} PUBLIC libc_gtest_defs)
+  endif()
   if(fq_deps_list)
     add_dependencies(${fq_target_name} ${fq_deps_list})
     target_link_libraries(${fq_target_name} PUBLIC ${fq_deps_list})
@@ -84,17 +87,34 @@ else()
   set(test_logger_osutil "libc.src.__support.OSUtil.osutil")
 endif()
 
-add_unittest_framework_library(
-  LibcTest
-  SRCS
+set(libc_test_hdrs
+  PigweedTest.h
+  Test.h
+  TestLogger.h
+  ZxTest.h
+)
+if(LLVM_LIBC_TEST_USE_GTEST)
+  set(libc_test_srcs
+    CmakeFilePath.cpp
+    TestLogger.cpp
+  )
+  list(APPEND libc_test_hdrs GTest.h)
+else()
+  set(libc_test_srcs
     CmakeFilePath.cpp
     LibcTest.cpp
     LibcTestMain.cpp
     TestLogger.cpp
+  )
+  list(APPEND libc_test_hdrs LibcTest.h)
+endif()
+
+add_unittest_framework_library(
+  LibcTest
+  SRCS
+    ${libc_test_srcs}
   HDRS
-    LibcTest.h
-    Test.h
-    TestLogger.h
+    ${libc_test_hdrs}
   COMPILE_OPTIONS
     ${test_logger_compile_options}
   DEPENDS
@@ -108,6 +128,8 @@ add_unittest_framework_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
     libc.src.__support.fixed_point.fx_rep
+    libc.src.__support.integer_to_string
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.properties.compiler
     libc.src.__support.uint128
     ${test_logger_osutil}
@@ -123,46 +145,48 @@ add_unittest_framework_library(
     .LibcTest
 )
 
-if(LIBC_TEST_SUBPROCESS_TESTS)
-  set(libc_death_test_deps
-    libc.hdr.stdint_proxy
-    libc.src.__support.CPP.functional
-    libc.src.__support.CPP.scope
-    libc.src.__support.libc_assert
-  )
-  if(LLVM_LIBC_FULL_BUILD)
-    list(APPEND libc_death_test_deps
-      libc.include.llvm-libc-macros.poll-macros
-      libc.include.llvm-libc-macros.signal_macros
-      libc.include.llvm-libc-macros.sys_wait_macros
-      libc.include.llvm-libc-types.pid_t
-      libc.include.llvm-libc-types.struct_pollfd
-    )
-    if(TARGET libc.src.sys.prctl.prctl)
-      list(APPEND libc_death_test_deps
-        libc.src.sys.prctl.prctl
-      )
-    endif()
-  endif()
-  add_unittest_framework_library(
-    LibcDeathTestExecutors
-    SRCS
-      ExecuteFunctionUnix.cpp
-      LibcDeathTestExecutors.cpp
-    HDRS
-      ExecuteFunction.h
-    DEPENDS
-      ${libc_death_test_deps}
-  )
-else()
-  add_header_library(
-    LibcDeathTestExecutors
-    HDRS
-      ExecuteFunction.h
-    DEPENDS
+if(NOT LLVM_LIBC_TEST_USE_GTEST)
+  if(LIBC_TEST_SUBPROCESS_TESTS)
+    set(libc_death_test_deps
       libc.hdr.stdint_proxy
       libc.src.__support.CPP.functional
-  )
+      libc.src.__support.CPP.scope
+      libc.src.__support.libc_assert
+    )
+    if(LLVM_LIBC_FULL_BUILD)
+      list(APPEND libc_death_test_deps
+        libc.include.llvm-libc-macros.poll-macros
+        libc.include.llvm-libc-macros.signal_macros
+        libc.include.llvm-libc-macros.sys_wait_macros
+        libc.include.llvm-libc-types.pid_t
+        libc.include.llvm-libc-types.struct_pollfd
+      )
+      if(TARGET libc.src.sys.prctl.prctl)
+        list(APPEND libc_death_test_deps
+          libc.src.sys.prctl.prctl
+        )
+      endif()
+    endif()
+    add_unittest_framework_library(
+      LibcDeathTestExecutors
+      SRCS
+        ExecuteFunctionUnix.cpp
+        LibcDeathTestExecutors.cpp
+      HDRS
+        ExecuteFunction.h
+      DEPENDS
+        ${libc_death_test_deps}
+    )
+  else()
+    add_header_library(
+      LibcDeathTestExecutors
+      HDRS
+        ExecuteFunction.h
+      DEPENDS
+        libc.hdr.stdint_proxy
+        libc.src.__support.CPP.functional
+    )
+  endif()
 endif()
 
 set(libc_hermetic_test_support_srcs HermeticTestUtils.cpp)

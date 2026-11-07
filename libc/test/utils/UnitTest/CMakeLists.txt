@@ -1,4 +1,4 @@
-if(LIBC_TARGET_OS_IS_GPU)
+if(LIBC_TARGET_OS_IS_GPU OR LLVM_LIBC_TEST_USE_GTEST)
   return()
 endif()
 

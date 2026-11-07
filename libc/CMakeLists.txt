@@ -29,6 +29,9 @@ if(LIBC_CMAKE_VERBOSE_LOGGING)
     message(STATUS "Undefining ${OLD_DEF}")
   endforeach()
 endif()
+get_directory_property(
+  LLVM_LIBC_SAVED_COMPILE_DEFINITIONS COMPILE_DEFINITIONS
+)
 set_directory_properties(PROPERTIES
   # `llvm-project/llvm/CMakeLists.txt` adds the following directive
   # `include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})` We
@@ -270,6 +273,13 @@ option(LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP
   "Link hermetic tests against LLVM libc's own startup object"
   ON)
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
+option(LLVM_LIBC_TEST_USE_GTEST
+  "Build LLVM libc unit tests against GoogleTest in overlay mode" OFF)
+if(LLVM_LIBC_TEST_USE_GTEST AND LLVM_LIBC_FULL_BUILD)
+  message(FATAL_ERROR
+    "LLVM_LIBC_TEST_USE_GTEST is only supported in overlay mode "
+    "(LLVM_LIBC_FULL_BUILD=OFF).")
+endif()
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
 option(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS
@@ -531,6 +541,33 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
 endif()
 
 option(LIBC_INCLUDE_DOCS "Build the libc documentation." ${LLVM_INCLUDE_DOCS})
+
+if(LLVM_INCLUDE_TESTS AND LLVM_LIBC_TEST_USE_GTEST)
+  if(COMMAND build_gtest)
+    get_directory_property(
+      libc_current_compile_defs COMPILE_DEFINITIONS
+    )
+    set_directory_properties(PROPERTIES
+      COMPILE_DEFINITIONS "${LLVM_LIBC_SAVED_COMPILE_DEFINITIONS}"
+    )
+    build_gtest()
+    set_directory_properties(PROPERTIES
+      COMPILE_DEFINITIONS "${libc_current_compile_defs}"
+    )
+  endif()
+  if(NOT TARGET default_gtest OR NOT TARGET default_gtest_main)
+    message(FATAL_ERROR
+      "LLVM_LIBC_TEST_USE_GTEST requires LLVM's in-tree GoogleTest targets "
+      "(default_gtest and default_gtest_main).")
+  endif()
+  add_library(libc_gtest_defs INTERFACE)
+  get_target_property(gtest_inc default_gtest INTERFACE_INCLUDE_DIRECTORIES)
+  if(gtest_inc)
+    target_include_directories(libc_gtest_defs SYSTEM INTERFACE ${gtest_inc})
+  endif()
+  target_compile_definitions(libc_gtest_defs INTERFACE GTEST_HAS_RTTI=0)
+  target_link_libraries(libc_gtest_defs INTERFACE default_gtest)
+endif()
 
 include(LLVMLibCCheckCpuFeatures)
 include(CheckCompilerFeatures)

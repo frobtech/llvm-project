@@ -252,7 +252,7 @@ private:
   }
 
 public:
-  LIBC_INLINE static void deallocate(HashTable *table) {
+  LIBC_ALWAYS_INLINE static void deallocate(HashTable *table) {
     if (table) {
       void *ptr =
           reinterpret_cast<uint8_t *>(table) - table->offset_from_entries();
@@ -260,7 +260,8 @@ public:
     }
   }
 
-  LIBC_INLINE static HashTable *allocate(size_t capacity, uint64_t randomness) {
+  LIBC_ALWAYS_INLINE static HashTable *allocate(size_t capacity,
+                                                uint64_t randomness) {
     // check if capacity_to_entries overflows MAX_MEM_SIZE
     if (capacity > size_t{1} << (8 * sizeof(size_t) - 1 - 3))
       return nullptr;

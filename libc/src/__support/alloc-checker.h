@@ -31,15 +31,31 @@ public:
 
   LIBC_INLINE operator bool() const { return success; }
 
-  LIBC_INLINE static void *alloc(size_t s, AllocChecker &ac) {
+  LIBC_ALWAYS_INLINE static void *alloc(size_t s, AllocChecker &ac) {
+#ifdef LIBC_CPP_NEW_USES_STD_NEW
+    void *mem = ::operator new(s, std::nothrow);
+#else
     void *mem = ::malloc(s);
+#endif
     ac = (mem != nullptr);
     return mem;
   }
 
-  LIBC_INLINE static void *aligned_alloc(size_t s, std::align_val_t align,
-                                         AllocChecker &ac) {
-#ifdef LIBC_TARGET_OS_IS_WINDOWS
+  LIBC_ALWAYS_INLINE static void *alloc_array(size_t s, AllocChecker &ac) {
+#ifdef LIBC_CPP_NEW_USES_STD_NEW
+    void *mem = ::operator new[](s, std::nothrow);
+    ac = (mem != nullptr);
+    return mem;
+#else
+    return alloc(s, ac);
+#endif
+  }
+
+  LIBC_ALWAYS_INLINE static void *
+  aligned_alloc(size_t s, std::align_val_t align, AllocChecker &ac) {
+#ifdef LIBC_CPP_NEW_USES_STD_NEW
+    void *mem = ::operator new(s, align, std::nothrow);
+#elif defined(LIBC_TARGET_OS_IS_WINDOWS)
     // std::aligned_alloc is not available on Windows because std::free on
     // Windows cannot deallocate any over-aligned memory. Microsoft provides an
     // alternative for std::aligned_alloc named _aligned_malloc, but it must be
@@ -51,28 +67,41 @@ public:
     ac = (mem != nullptr);
     return mem;
   }
+
+  LIBC_ALWAYS_INLINE static void *
+  aligned_alloc_array(size_t s, std::align_val_t align, AllocChecker &ac) {
+#ifdef LIBC_CPP_NEW_USES_STD_NEW
+    void *mem = ::operator new[](s, align, std::nothrow);
+    ac = (mem != nullptr);
+    return mem;
+#else
+    return aligned_alloc(s, align, ac);
+#endif
+  }
 };
 
 } // namespace LIBC_NAMESPACE_DECL
 
-LIBC_INLINE void *operator new(size_t size,
-                               LIBC_NAMESPACE::AllocChecker &ac) noexcept {
+LIBC_ALWAYS_INLINE void *
+operator new(size_t size, LIBC_NAMESPACE::AllocChecker &ac) noexcept {
   return LIBC_NAMESPACE::AllocChecker::alloc(size, ac);
 }
 
-LIBC_INLINE void *operator new(size_t size, std::align_val_t align,
-                               LIBC_NAMESPACE::AllocChecker &ac) noexcept {
+LIBC_ALWAYS_INLINE void *
+operator new(size_t size, std::align_val_t align,
+             LIBC_NAMESPACE::AllocChecker &ac) noexcept {
   return LIBC_NAMESPACE::AllocChecker::aligned_alloc(size, align, ac);
 }
 
-LIBC_INLINE void *operator new[](size_t size,
-                                 LIBC_NAMESPACE::AllocChecker &ac) noexcept {
-  return LIBC_NAMESPACE::AllocChecker::alloc(size, ac);
+LIBC_ALWAYS_INLINE void *
+operator new[](size_t size, LIBC_NAMESPACE::AllocChecker &ac) noexcept {
+  return LIBC_NAMESPACE::AllocChecker::alloc_array(size, ac);
 }
 
-LIBC_INLINE void *operator new[](size_t size, std::align_val_t align,
-                                 LIBC_NAMESPACE::AllocChecker &ac) noexcept {
-  return LIBC_NAMESPACE::AllocChecker::aligned_alloc(size, align, ac);
+LIBC_ALWAYS_INLINE void *
+operator new[](size_t size, std::align_val_t align,
+               LIBC_NAMESPACE::AllocChecker &ac) noexcept {
+  return LIBC_NAMESPACE::AllocChecker::aligned_alloc_array(size, align, ac);
 }
 
 #endif // LLVM_LIBC_SRC___SUPPORT_ALLOC_CHECKER_H
